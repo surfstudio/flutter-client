@@ -15,8 +15,16 @@ dependencies:
   logging: ^0.11.0
   source_gen: ^0.9.0
   meta: ^1.1.5
-  jaguar_resty: ^2.10.14
-  jaguar_retrofit: ^2.8.8
+  jaguar_resty:
+    git:
+      url: git://github.com/anton9088-ros/client.git
+      path: resty
+      ref: dio
+  jaguar_retrofit:
+    git:
+      url: git://github.com/anton9088-ros/client.git
+      path: retrofit
+      ref: dio
 
 dev_dependencies:
   pedenatic:

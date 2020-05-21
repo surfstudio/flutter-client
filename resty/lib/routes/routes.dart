@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:http/http.dart' as ht;
+import 'package:dio/dio.dart' as dio;
 import 'dart:convert' as codec;
 import 'package:jaguar_resty/expect/expect.dart';
 import 'package:jaguar_resty/response/response.dart';
@@ -23,7 +23,7 @@ Delete delete(String url) => Delete(url);
 
 OptionsMethod options(String url) => OptionsMethod(url);
 
-ht.BaseClient globalClient;
+dio.Dio globalClient;
 
 class RouteBase {
   final metadataMap = <String, dynamic>{};
@@ -46,12 +46,12 @@ class RouteBase {
   final getBefore = <Before>[];
   final getAfter = <After>[];
 
-  ht.BaseClient getClient;
+  dio.Dio getClient;
 
   RouteBase();
 
   /// Set the [client] used to make HTTP requests
-  RouteBase withClient(ht.BaseClient client) {
+  RouteBase withClient(dio.Dio client) {
     getClient = client;
     return this;
   }
@@ -182,7 +182,9 @@ class RouteBase {
   }
 
   RouteBase hookHeader(String key, ValueCallback<String> getter) {
-    if (getter != null) getAfter.add((r) => getter(r.headers[key]));
+    if (getter != null) getAfter.add((r) => 
+      r.headers[key].forEach((header) => getter(header))
+    );
     return this;
   }
 
@@ -368,7 +370,7 @@ class Get extends RouteBase with RouteFetch {
     getAfter.addAll(route.getAfter);
   }
 
-  Get withClient(ht.BaseClient client) => super.withClient(client);
+  Get withClient(dio.Dio client) => super.withClient(client);
 
   Get http(String origin, [String path]) => super.http(origin, path);
 
@@ -418,10 +420,14 @@ class Get extends RouteBase with RouteFetch {
 
   Get url(String url) => super.url(url);
 
-  Future<ht.Response> _send() async {
+  Future<dio.Response<List<int>>> _send() async {
     for (Before mod in getBefore) await mod(this);
     _prepare(this);
-    return (getClient ?? globalClient).get(getUrl, headers: getHeaders);
+    return (getClient ?? globalClient).get(getUrl,
+        options: dio.Options(
+          headers: getHeaders,
+          responseType: dio.ResponseType.bytes,
+        ));
   }
 
   AsyncStringResponse go(
@@ -456,7 +462,7 @@ class Get extends RouteBase with RouteFetch {
           List<int> bytes,
           String mimeType,
           String encoding,
-          Map<String, String> headers,
+          Map<String, List<String>> headers,
           int contentLength}) =>
       go().exact(
           statusCode: statusCode,
@@ -601,7 +607,7 @@ class Post extends RouteBase
 
   dynamic getBody() => _body;
 
-  Post withClient(ht.BaseClient client) => super.withClient(client);
+  Post withClient(dio.Dio client) => super.withClient(client);
 
   Post http(String origin, [String path]) => super.http(origin, path);
 
@@ -677,7 +683,7 @@ class Post extends RouteBase
 
   Post url(String value) => super.url(value);
 
-  Future<ht.Response> _send() async {
+  Future<dio.Response<List<int>>> _send() async {
     for (Before mod in getBefore) await mod(this);
 
     _prepare(this);
@@ -686,28 +692,37 @@ class Post extends RouteBase
         _body is List<int> ||
         _body is Map<String, String> ||
         _body == null) {
-      return (getClient ?? globalClient)
-          .post(getUrl, headers: getHeaders, body: _body);
+      return (getClient ?? globalClient).post(getUrl,
+          data: _body,
+          options: dio.Options(
+              headers: getHeaders, responseType: dio.ResponseType.bytes));
     } else if (_body is Map<String, Multipart>) {
       final body = _body as Map<String, Multipart>;
-      final r = ht.MultipartRequest('POST', Uri.parse(getUrl));
+      dio.FormData r = dio.FormData();
       for (final String field in body.keys) {
         final Multipart value = body[field];
         if (value is MultipartString) {
-          r.fields[field] = value.value;
+          r.fields.add(MapEntry(field, value.value));
         } else if (value is MultipartStreamFile) {
-          r.files.add(ht.MultipartFile(field, value.value, value.length,
-              filename: value.filename, contentType: value.contentType));
+          final multipartFile = dio.MultipartFile(value.value, value.length,
+              filename: value.filename, contentType: value.contentType);
+          r.files.add(MapEntry(field, multipartFile));
         } else if (value is MultipartFile) {
-          r.files.add(ht.MultipartFile.fromBytes(field, value.value,
-              filename: value.filename, contentType: value.contentType));
+          final multipartFile = dio.MultipartFile.fromBytes(value.value,
+              filename: value.filename, contentType: value.contentType);
+          r.files.add(MapEntry(field, multipartFile));
         } else if (value is MultipartStringFile) {
-          r.files.add(ht.MultipartFile.fromString(field, value.value,
-              filename: value.filename, contentType: value.contentType));
+          final multipartFile = dio.MultipartFile.fromString(value.value,
+              filename: value.filename, contentType: value.contentType);
+          r.files.add(MapEntry(field, multipartFile));
         }
       }
-      r.headers.addAll(getHeaders);
-      return r.send().then((r) => ht.Response.fromStream(r));
+      return (getClient ?? globalClient).post(getUrl,
+          data: r,
+          options: dio.Options(
+            headers: getHeaders,
+            responseType: dio.ResponseType.bytes,
+          ));
     } else {
       throw Exception('Invalid body!');
     }
@@ -745,7 +760,7 @@ class Post extends RouteBase
           List<int> bytes,
           String mimeType,
           String encoding,
-          Map<String, String> headers,
+          Map<String, List<String>> headers,
           int contentLength}) =>
       go().exact(
           statusCode: statusCode,
@@ -803,7 +818,7 @@ class Patch extends RouteBase
 
   dynamic getBody() => _body;
 
-  Patch withClient(ht.BaseClient client) => super.withClient(client);
+  Patch withClient(dio.Dio client) => super.withClient(client);
 
   Patch http(String origin, [String path]) => super.http(origin, path);
 
@@ -879,7 +894,7 @@ class Patch extends RouteBase
 
   Patch url(String value) => super.url(value);
 
-  Future<ht.Response> _send() async {
+  Future<dio.Response<List<int>>> _send() async {
     for (Before mod in getBefore) await mod(this);
 
     _prepare(this);
@@ -888,28 +903,38 @@ class Patch extends RouteBase
         _body is List<int> ||
         _body is Map<String, String> ||
         _body == null) {
-      return (getClient ?? globalClient)
-          .patch(getUrl, headers: getHeaders, body: _body);
+      return (getClient ?? globalClient).patch(getUrl,
+          data: _body,
+          options: dio.Options(
+              headers: getHeaders, responseType: dio.ResponseType.bytes));
     } else if (_body is Map<String, Multipart>) {
       final body = _body as Map<String, Multipart>;
-      final r = ht.MultipartRequest('PATCH', Uri.parse(getUrl));
+
+      dio.FormData r = dio.FormData();
       for (final String field in body.keys) {
         final Multipart value = body[field];
         if (value is MultipartString) {
-          r.fields[field] = value.value;
+          r.fields.add(MapEntry(field, value.value));
         } else if (value is MultipartStreamFile) {
-          r.files.add(ht.MultipartFile(field, value.value, value.length,
-              filename: value.filename, contentType: value.contentType));
+          final multipartFile = dio.MultipartFile(value.value, value.length,
+              filename: value.filename, contentType: value.contentType);
+          r.files.add(MapEntry(field, multipartFile));
         } else if (value is MultipartFile) {
-          r.files.add(ht.MultipartFile.fromBytes(field, value.value,
-              filename: value.filename, contentType: value.contentType));
+          final multipartFile = dio.MultipartFile.fromBytes(value.value,
+              filename: value.filename, contentType: value.contentType);
+          r.files.add(MapEntry(field, multipartFile));
         } else if (value is MultipartStringFile) {
-          r.files.add(ht.MultipartFile.fromString(field, value.value,
-              filename: value.filename, contentType: value.contentType));
+          final multipartFile = dio.MultipartFile.fromString(value.value,
+              filename: value.filename, contentType: value.contentType);
+          r.files.add(MapEntry(field, multipartFile));
         }
       }
-      r.headers.addAll(getHeaders);
-      return r.send().then((r) => ht.Response.fromStream(r));
+      return (getClient ?? globalClient).patch(getUrl,
+          data: r,
+          options: dio.Options(
+            headers: getHeaders,
+            responseType: dio.ResponseType.bytes,
+          ));
     } else {
       throw Exception('Invalid body!');
     }
@@ -947,7 +972,7 @@ class Patch extends RouteBase
           List<int> bytes,
           String mimeType,
           String encoding,
-          Map<String, String> headers,
+          Map<String, List<String>> headers,
           int contentLength}) =>
       go().exact(
           statusCode: statusCode,
@@ -1005,7 +1030,7 @@ class Put extends RouteBase
 
   dynamic getBody() => _body;
 
-  Put withClient(ht.BaseClient client) => super.withClient(client);
+  Put withClient(dio.Dio client) => super.withClient(client);
 
   Put http(String origin, [String path]) => super.http(origin, path);
 
@@ -1080,7 +1105,7 @@ class Put extends RouteBase
 
   Put url(String value) => super.url(value);
 
-  Future<ht.Response> _send() async {
+  Future<dio.Response<List<int>>> _send() async {
     for (Before mod in getBefore) await mod(this);
 
     _prepare(this);
@@ -1089,28 +1114,38 @@ class Put extends RouteBase
         _body is List<int> ||
         _body is Map<String, String> ||
         _body == null) {
-      return (getClient ?? globalClient)
-          .put(getUrl, headers: getHeaders, body: _body);
+      return (getClient ?? globalClient).put(getUrl,
+          data: _body,
+          options: dio.Options(
+              headers: getHeaders, responseType: dio.ResponseType.bytes));
     } else if (_body is Map<String, Multipart>) {
       final body = _body as Map<String, Multipart>;
-      final r = ht.MultipartRequest('PUT', Uri.parse(getUrl));
+
+      dio.FormData r = dio.FormData();
       for (final String field in body.keys) {
         final Multipart value = body[field];
         if (value is MultipartString) {
-          r.fields[field] = value.value;
+          r.fields.add(MapEntry(field, value.value));
         } else if (value is MultipartStreamFile) {
-          r.files.add(ht.MultipartFile(field, value.value, value.length,
-              filename: value.filename, contentType: value.contentType));
+          final multipartFile = dio.MultipartFile(value.value, value.length,
+              filename: value.filename, contentType: value.contentType);
+          r.files.add(MapEntry(field, multipartFile));
         } else if (value is MultipartFile) {
-          r.files.add(ht.MultipartFile.fromBytes(field, value.value,
-              filename: value.filename, contentType: value.contentType));
+          final multipartFile = dio.MultipartFile.fromBytes(value.value,
+              filename: value.filename, contentType: value.contentType);
+          r.files.add(MapEntry(field, multipartFile));
         } else if (value is MultipartStringFile) {
-          r.files.add(ht.MultipartFile.fromString(field, value.value,
-              filename: value.filename, contentType: value.contentType));
+          final multipartFile = dio.MultipartFile.fromString(value.value,
+              filename: value.filename, contentType: value.contentType);
+          r.files.add(MapEntry(field, multipartFile));
         }
       }
-      r.headers.addAll(getHeaders);
-      return r.send().then((r) => ht.Response.fromStream(r));
+      return (getClient ?? globalClient).put(getUrl,
+          data: r,
+          options: dio.Options(
+            headers: getHeaders,
+            responseType: dio.ResponseType.bytes,
+          ));
     } else {
       throw Exception('Invalid body!');
     }
@@ -1148,7 +1183,7 @@ class Put extends RouteBase
           List<int> bytes,
           String mimeType,
           String encoding,
-          Map<String, String> headers,
+          Map<String, List<String>> headers,
           int contentLength}) =>
       go().exact(
           statusCode: statusCode,
@@ -1198,7 +1233,7 @@ class Delete extends RouteBase with RouteFetch {
     getAfter.addAll(route.getAfter.toList());
   }
 
-  Delete withClient(ht.BaseClient client) => super.withClient(client);
+  Delete withClient(dio.Dio client) => super.withClient(client);
 
   Delete http(String origin, [String path]) => super.http(origin, path);
 
@@ -1249,10 +1284,12 @@ class Delete extends RouteBase with RouteFetch {
 
   Delete url(String value) => super.url(value);
 
-  Future<ht.Response> _send() async {
+  Future<dio.Response<List<int>>> _send() async {
     for (Before mod in getBefore) await mod(this);
     _prepare(this);
-    return (getClient ?? globalClient).delete(getUrl, headers: getHeaders);
+    return (getClient ?? globalClient).delete(getUrl,
+        options: dio.Options(
+            headers: getHeaders, responseType: dio.ResponseType.bytes));
   }
 
   AsyncStringResponse go(
@@ -1287,7 +1324,7 @@ class Delete extends RouteBase with RouteFetch {
           List<int> bytes,
           String mimeType,
           String encoding,
-          Map<String, String> headers,
+          Map<String, List<String>> headers,
           int contentLength}) =>
       go().exact(
           statusCode: statusCode,
@@ -1336,7 +1373,7 @@ class OptionsMethod extends RouteBase with RouteFetch {
     getAfter.addAll(route.getAfter.toList());
   }
 
-  OptionsMethod withClient(ht.BaseClient client) => super.withClient(client);
+  OptionsMethod withClient(dio.Dio client) => super.withClient(client);
 
   OptionsMethod http(String origin, [String path]) => super.http(origin, path);
 
@@ -1390,14 +1427,13 @@ class OptionsMethod extends RouteBase with RouteFetch {
 
   OptionsMethod url(String value) => super.url(value);
 
-  Future<ht.Response> _send() async {
+  Future<dio.Response<List<int>>> _send() async {
     for (Before mod in getBefore) await mod(this);
     _prepare(this);
-    final req = ht.Request('OPTIONS', Uri.parse(getUrl));
-    req.headers.addAll(getHeaders);
-    return (getClient ?? globalClient)
-        .send(req)
-        .then((r) => ht.Response.fromStream(r));
+
+    return (getClient ?? globalClient).request(getUrl,
+        options: dio.Options(
+            method: 'OPTIONS', responseType: dio.ResponseType.bytes));
   }
 
   AsyncStringResponse go(
@@ -1432,7 +1468,7 @@ class OptionsMethod extends RouteBase with RouteFetch {
           List<int> bytes,
           String mimeType,
           String encoding,
-          Map<String, String> headers,
+          Map<String, List<String>> headers,
           int contentLength}) =>
       go().exact(
           statusCode: statusCode,

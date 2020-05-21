@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:meta/meta.dart';
 import 'dart:convert' as codec;
 
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart' as dio;
 import 'package:jaguar_resty/expect/expect.dart';
 import 'package:async/async.dart';
 import 'package:http_parser/http_parser.dart' show MediaType;
@@ -25,7 +25,7 @@ abstract class AsyncResponse<BT> {
 
   FutureOr<List<int>> get bytes;
 
-  FutureOr<Map<String, String>> get headers;
+  FutureOr<Map<String, List<String>>> get headers;
 
   FutureOr<bool> get isRedirect;
 
@@ -35,7 +35,7 @@ abstract class AsyncResponse<BT> {
 
   FutureOr<int> get contentLength;
 
-  FutureOr<http.BaseRequest> get request;
+  FutureOr<dio.RequestOptions> get request;
 
   FutureOr<RouteBase> get sender;
 
@@ -59,7 +59,7 @@ abstract class AsyncResponse<BT> {
       List<int> bytes,
       String mimeType,
       String encoding,
-      Map<String, String> headers,
+      Map<String, List<String>> headers,
       int contentLength});
 
   AsyncResponse<BT> run(ResponseHook<BT> func);
@@ -77,7 +77,7 @@ class AsyncTResponse<BT> extends DelegatingFuture<Response<BT>>
 
   Future<List<int>> get bytes => then((r) => r.bytes);
 
-  Future<Map<String, String>> get headers => then((r) => r.headers);
+  Future<Map<String, List<String>>> get headers => then((r) => r.headers);
 
   Future<bool> get isRedirect => then((r) => r.isRedirect);
 
@@ -87,7 +87,7 @@ class AsyncTResponse<BT> extends DelegatingFuture<Response<BT>>
 
   Future<int> get contentLength => then((r) => r.contentLength);
 
-  Future<http.BaseRequest> get request => then((r) => r.request);
+  Future<dio.RequestOptions> get request => then((r) => r.request);
 
   Future<RouteBase> get sender => then((r) => r.sender);
 
@@ -119,7 +119,7 @@ class AsyncTResponse<BT> extends DelegatingFuture<Response<BT>>
       List<int> bytes,
       String mimeType,
       String encoding,
-      Map<String, String> headers,
+      Map<String, List<String>> headers,
       int contentLength}) {
     return AsyncTResponse<BT>(then((r) {
       r.exact(
@@ -150,7 +150,7 @@ class AsyncStringResponse extends DelegatingFuture<StringResponse>
     implements AsyncResponse<String> {
   AsyncStringResponse(Future<StringResponse> inner) : super(inner);
 
-  AsyncStringResponse.from(Future<http.Response> inner,
+  AsyncStringResponse.from(Future<dio.Response> inner,
       {@required RouteBase sender, @required RouteBase sent})
       : super(inner
             .then((r) => StringResponse.from(r, sender: sender, sent: sent)));
@@ -161,7 +161,7 @@ class AsyncStringResponse extends DelegatingFuture<StringResponse>
 
   Future<List<int>> get bytes => then((r) => r.bytes);
 
-  Future<Map<String, String>> get headers => then((r) => r.headers);
+  Future<Map<String, List<String>>> get headers => then((r) => r.headers);
 
   Future<bool> get isRedirect => then((r) => r.isRedirect);
 
@@ -171,7 +171,7 @@ class AsyncStringResponse extends DelegatingFuture<StringResponse>
 
   Future<int> get contentLength => then((r) => r.contentLength);
 
-  Future<http.BaseRequest> get request => then((r) => r.request);
+  Future<dio.RequestOptions> get request => then((r) => r.request);
 
   Future<String> get mimeType => then((r) => r.mimeType);
 
@@ -203,7 +203,7 @@ class AsyncStringResponse extends DelegatingFuture<StringResponse>
       List<int> bytes,
       String mimeType,
       String encoding,
-      Map<String, String> headers,
+      Map<String, List<String>> headers,
       int contentLength}) {
     return AsyncStringResponse(then((r) => r.exact(
         statusCode: statusCode,
@@ -252,7 +252,7 @@ abstract class Response<T> implements AsyncResponse<T> {
 
   List<int> get bytes;
 
-  Map<String, String> get headers;
+  Map<String, List<String>> get headers;
 
   bool get isRedirect;
 
@@ -262,7 +262,7 @@ abstract class Response<T> implements AsyncResponse<T> {
 
   int get contentLength;
 
-  http.BaseRequest get request;
+  dio.RequestOptions get request;
 
   RouteBase get sender;
 
@@ -284,7 +284,7 @@ abstract class Response<T> implements AsyncResponse<T> {
       List<int> bytes,
       String mimeType,
       String encoding,
-      Map<String, String> headers,
+      Map<String, List<String>> headers,
       int contentLength});
 
   StringResponse get toStringResponse;
@@ -301,7 +301,7 @@ class TResponse<BT> implements Response<BT> {
 
   final List<int> bytes;
 
-  final Map<String, String> headers;
+  final Map<String, List<String>> headers;
 
   final bool isRedirect;
 
@@ -311,7 +311,7 @@ class TResponse<BT> implements Response<BT> {
 
   final int contentLength;
 
-  final http.BaseRequest request;
+  final dio.RequestOptions request;
 
   final RouteBase sender;
 
@@ -379,7 +379,7 @@ class TResponse<BT> implements Response<BT> {
       List<int> bytes,
       String mimeType,
       String encoding,
-      Map<String, String> headers,
+      Map<String, List<String>> headers,
       int contentLength}) {
     final conditions = <Checker<Response>>[];
     if (statusCode != null) conditions.add(statusCodeIs(statusCode));
@@ -388,8 +388,8 @@ class TResponse<BT> implements Response<BT> {
     if (mimeType != null) conditions.add(mimeTypeIs(mimeType));
     if (encoding != null) conditions.add(encodingIs(encoding));
     if (headers != null) {
-      headers.forEach(
-          (String key, String value) => conditions.add(headersHas(key, value)));
+      headers.forEach((String key, List<String> value) =>
+          conditions.add(headersHas(key, value)));
     }
     return expect(conditions);
   }
@@ -405,7 +405,7 @@ class TResponse<BT> implements Response<BT> {
 
   @override
   String toString() {
-    return 'TResponse{statusCode: $statusCode, url: ${request.url}, mimeType: $mimeType, encoding: $encoding, body: $body}';
+    return 'TResponse{statusCode: $statusCode, url: ${request.uri}, mimeType: $mimeType, encoding: $encoding, body: $body}';
   }
 }
 
@@ -416,7 +416,7 @@ class StringResponse implements Response<String> {
 
   final List<int> bytes;
 
-  final Map<String, String> headers;
+  final Map<String, List<String>> headers;
 
   final bool isRedirect;
 
@@ -426,7 +426,7 @@ class StringResponse implements Response<String> {
 
   final int contentLength;
 
-  final http.BaseRequest request;
+  final dio.RequestOptions request;
 
   final RouteBase sender;
 
@@ -450,18 +450,23 @@ class StringResponse implements Response<String> {
       this.mimeType,
       this.encoding});
 
-  factory StringResponse.from(http.Response resp,
+  factory StringResponse.from(dio.Response<List<int>> resp,
       {@required RouteBase sender, @required RouteBase sent}) {
     final mediaType = MediaType.parse(
-        resp.headers['content-type'] ?? Response.defaultContentType);
+        resp.headers.value(dio.Headers.contentTypeHeader) ??
+            Response.defaultContentType);
+
+    final contentLength =
+        int.parse(resp.headers.value(dio.Headers.contentLengthHeader) ?? '0');
+
     return StringResponse(
         statusCode: resp.statusCode,
-        bytes: resp.bodyBytes,
-        headers: resp.headers,
+        bytes: resp.data,
+        headers: resp.headers.map,
         isRedirect: resp.isRedirect,
-        persistentConnection: resp.persistentConnection,
-        reasonPhrase: resp.reasonPhrase,
-        contentLength: resp.contentLength,
+        persistentConnection: true,
+        reasonPhrase: resp.statusMessage,
+        contentLength: contentLength,
         request: resp.request,
         sender: sender,
         sent: sent,
@@ -562,7 +567,7 @@ class StringResponse implements Response<String> {
       List<int> bytes,
       String mimeType,
       String encoding,
-      Map<String, String> headers,
+      Map<String, List<String>> headers,
       int contentLength}) {
     final conditions = <Checker<Response>>[];
     if (statusCode != null) conditions.add(statusCodeIs(statusCode));
@@ -571,8 +576,8 @@ class StringResponse implements Response<String> {
     if (mimeType != null) conditions.add(mimeTypeIs(mimeType));
     if (encoding != null) conditions.add(encodingIs(encoding));
     if (headers != null) {
-      headers.forEach(
-          (String key, String value) => conditions.add(headersHas(key, value)));
+      headers.forEach((String key, List<String> value) =>
+          conditions.add(headersHas(key, value)));
     }
     return expect(conditions);
   }
@@ -586,12 +591,15 @@ class StringResponse implements Response<String> {
     return func(this);
   }
 
-  Map<String, ClientCookie> get cookies =>
-      parseSetCookie(headers['set-cookie']);
+  Map<String, ClientCookie> get cookies {
+    return Map.fromEntries(headers['set-cookie']
+        .map((header) => parseSetCookie(header))
+        .expand((element) => element.entries));
+  }
 
   @override
   String toString() {
-    return 'StringResponse{statusCode: $statusCode, url: ${request.url}, mimeType: $mimeType, encoding: $encoding, body: $body}';
+    return 'StringResponse{statusCode: $statusCode, url: ${request.uri}, mimeType: $mimeType, encoding: $encoding, body: $body}';
   }
 }
 

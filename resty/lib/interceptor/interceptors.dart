@@ -25,7 +25,9 @@ class CookieJar extends Interceptor {
   }
 
   StringResponse after(StringResponse resp) {
-    store.addFromHeader(resp.headers['set-cookie']);
+    for (final cookieHeader in resp.headers['set-cookie']) {
+      store.addFromHeader(cookieHeader);
+    }
     return null;
   }
 }
@@ -40,7 +42,7 @@ class BearerToken extends Interceptor {
 
   StringResponse after(StringResponse resp) {
     final authHeaders =
-        AuthHeaders.fromHeaderStr(resp.headers['authorization']);
+        AuthHeaders.fromHeaderStr(resp.headers['authorization'].first);
     if (authHeaders.containsScheme('Bearer'))
       token = authHeaders.items['Bearer'].credentials;
     return null;

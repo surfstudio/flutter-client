@@ -77,14 +77,14 @@ Checker<Response> statusCodeIsInRange(int lower, int higher) =>
       return <Mismatch>[];
     };
 
-Checker<Response> headersHas(String header, [String value]) => (Response resp) {
+Checker<Response> headersHas(String header, [List<String> value]) => (Response resp) {
       if (!resp.headers.containsKey(header))
         return <Mismatch>[
           new MapHasMismatch(header,
               customMessage: (m) => 'Expected header ${m.key} is not found!')
         ];
       if (value != null) {
-        if (resp.headers[header] != value)
+        if (IterableEquality().equals(resp.headers[header], value))
           return <Mismatch>[
             new EqualityMismatch(value, resp.headers[header],
                 customMessage: (m) =>
