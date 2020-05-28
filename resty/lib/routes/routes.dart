@@ -420,13 +420,13 @@ class Get extends RouteBase with RouteFetch {
 
   Get url(String url) => super.url(url);
 
-  Future<dio.Response<List<int>>> _send() async {
+  Future<dio.Response<String>> _send() async {
     for (Before mod in getBefore) await mod(this);
     _prepare(this);
     return (getClient ?? globalClient).get(getUrl,
         options: dio.Options(
           headers: getHeaders,
-          responseType: dio.ResponseType.bytes,
+          responseType: dio.ResponseType.plain,
         ));
   }
 
@@ -683,7 +683,7 @@ class Post extends RouteBase
 
   Post url(String value) => super.url(value);
 
-  Future<dio.Response<List<int>>> _send() async {
+  Future<dio.Response<String>> _send() async {
     for (Before mod in getBefore) await mod(this);
 
     _prepare(this);
@@ -695,7 +695,7 @@ class Post extends RouteBase
       return (getClient ?? globalClient).post(getUrl,
           data: _body,
           options: dio.Options(
-              headers: getHeaders, responseType: dio.ResponseType.bytes));
+              headers: getHeaders, responseType: dio.ResponseType.plain));
     } else if (_body is Map<String, Multipart>) {
       final body = _body as Map<String, Multipart>;
       dio.FormData r = dio.FormData();
@@ -721,7 +721,7 @@ class Post extends RouteBase
           data: r,
           options: dio.Options(
             headers: getHeaders,
-            responseType: dio.ResponseType.bytes,
+            responseType: dio.ResponseType.plain,
           ));
     } else {
       throw Exception('Invalid body!');
@@ -894,7 +894,7 @@ class Patch extends RouteBase
 
   Patch url(String value) => super.url(value);
 
-  Future<dio.Response<List<int>>> _send() async {
+  Future<dio.Response<String>> _send() async {
     for (Before mod in getBefore) await mod(this);
 
     _prepare(this);
@@ -906,7 +906,7 @@ class Patch extends RouteBase
       return (getClient ?? globalClient).patch(getUrl,
           data: _body,
           options: dio.Options(
-              headers: getHeaders, responseType: dio.ResponseType.bytes));
+              headers: getHeaders, responseType: dio.ResponseType.plain));
     } else if (_body is Map<String, Multipart>) {
       final body = _body as Map<String, Multipart>;
 
@@ -933,7 +933,7 @@ class Patch extends RouteBase
           data: r,
           options: dio.Options(
             headers: getHeaders,
-            responseType: dio.ResponseType.bytes,
+            responseType: dio.ResponseType.plain,
           ));
     } else {
       throw Exception('Invalid body!');
@@ -1105,7 +1105,7 @@ class Put extends RouteBase
 
   Put url(String value) => super.url(value);
 
-  Future<dio.Response<List<int>>> _send() async {
+  Future<dio.Response<String>> _send() async {
     for (Before mod in getBefore) await mod(this);
 
     _prepare(this);
@@ -1117,7 +1117,7 @@ class Put extends RouteBase
       return (getClient ?? globalClient).put(getUrl,
           data: _body,
           options: dio.Options(
-              headers: getHeaders, responseType: dio.ResponseType.bytes));
+              headers: getHeaders, responseType: dio.ResponseType.plain));
     } else if (_body is Map<String, Multipart>) {
       final body = _body as Map<String, Multipart>;
 
@@ -1144,7 +1144,7 @@ class Put extends RouteBase
           data: r,
           options: dio.Options(
             headers: getHeaders,
-            responseType: dio.ResponseType.bytes,
+            responseType: dio.ResponseType.plain,
           ));
     } else {
       throw Exception('Invalid body!');
@@ -1284,12 +1284,12 @@ class Delete extends RouteBase with RouteFetch {
 
   Delete url(String value) => super.url(value);
 
-  Future<dio.Response<List<int>>> _send() async {
+  Future<dio.Response<String>> _send() async {
     for (Before mod in getBefore) await mod(this);
     _prepare(this);
     return (getClient ?? globalClient).delete(getUrl,
         options: dio.Options(
-            headers: getHeaders, responseType: dio.ResponseType.bytes));
+            headers: getHeaders, responseType: dio.ResponseType.plain));
   }
 
   AsyncStringResponse go(
@@ -1427,13 +1427,13 @@ class OptionsMethod extends RouteBase with RouteFetch {
 
   OptionsMethod url(String value) => super.url(value);
 
-  Future<dio.Response<List<int>>> _send() async {
+  Future<dio.Response<String>> _send() async {
     for (Before mod in getBefore) await mod(this);
     _prepare(this);
 
     return (getClient ?? globalClient).request(getUrl,
         options: dio.Options(
-            method: 'OPTIONS', responseType: dio.ResponseType.bytes));
+            method: 'OPTIONS', responseType: dio.ResponseType.plain));
   }
 
   AsyncStringResponse go(

@@ -412,7 +412,7 @@ class TResponse<BT> implements Response<BT> {
 class StringResponse implements Response<String> {
   final int statusCode;
 
-  String _body;
+  final String body;
 
   final List<int> bytes;
 
@@ -438,6 +438,7 @@ class StringResponse implements Response<String> {
 
   StringResponse(
       {this.statusCode,
+      this.body,
       this.bytes,
       this.headers,
       this.isRedirect,
@@ -450,7 +451,7 @@ class StringResponse implements Response<String> {
       this.mimeType,
       this.encoding});
 
-  factory StringResponse.from(dio.Response<List<int>> resp,
+  factory StringResponse.from(dio.Response<String> resp,
       {@required RouteBase sender, @required RouteBase sent}) {
     final mediaType = MediaType.parse(
         resp.headers.value(dio.Headers.contentTypeHeader) ??
@@ -461,7 +462,8 @@ class StringResponse implements Response<String> {
 
     return StringResponse(
         statusCode: resp.statusCode,
-        bytes: resp.data,
+        body: resp.data,
+        bytes: null,
         headers: resp.headers.map,
         isRedirect: resp.isRedirect,
         persistentConnection: true,
@@ -473,8 +475,6 @@ class StringResponse implements Response<String> {
         mimeType: mediaType.mimeType,
         encoding: mediaType.parameters['charset'] ?? Response.defaultCharset);
   }
-
-  String get body => _body ??= _getEncoderForCharset(encoding).decode(bytes);
 
   StringResponse get toStringResponse => this;
 
