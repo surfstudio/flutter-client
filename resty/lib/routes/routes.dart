@@ -748,7 +748,12 @@ class Post extends RouteBase
     if (onFailure != null) resp = resp.onFailure(onFailure);
     if (throwOnErr == true) resp = resp.onFailure((r) => throw r);
     if (then != null) resp = resp.run(then);
-    return resp;
+
+    return AsyncStringResponse(
+      resp.catchError((error) {
+        throw error.error;
+      }, test: (error) => error is dio.DioError && error.error is Exception),
+    );
   }
 
   AsyncStringResponse expect(List<Checker<Response>> conditions) =>

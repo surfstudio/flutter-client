@@ -19,12 +19,12 @@ dependencies:
     git:
       url: git://github.com/anton9088-ros/client.git
       path: resty
-      ref: dio
+      ref: dio-2
   jaguar_retrofit:
     git:
       url: git://github.com/anton9088-ros/client.git
       path: retrofit
-      ref: dio
+      ref: dio-2
 
 dev_dependencies:
   pedenatic:
