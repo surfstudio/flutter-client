@@ -17,12 +17,12 @@ dependencies:
   meta: ^1.1.5
   jaguar_resty:
     git:
-      url: https://github.com/surfstudio/flutter-client.git
+      url: git://github.com/surfstudio/flutter-client.git
       path: resty
       ref: dio-2
   jaguar_retrofit:
     git:
-      url: https://github.com/surfstudio/flutter-client.git
+      url: git://github.com/surfstudio/flutter-client.git
       path: retrofit
       ref: dio-2
 
